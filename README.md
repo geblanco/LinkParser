@@ -1,5 +1,5 @@
 # LinkParser
-Episode link filter for tv shows and films we pages
+Episode link filter for tv shows and films web pages
 
 This project is intended to be a chrome extension (working on it), by now it's just a command line application for node js.
 
