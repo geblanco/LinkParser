@@ -44,7 +44,7 @@ module.exports.filterMidWare = function( item ){
 
 module.exports.endValidator = function( item, callback ) {
 
-	var regex = /(copyright[\s]*infringement)|(404)|(removed)|(not[\s]*found)/ig;
+	var regex = /(copyright[\s]*infringement)|(404)|(removed)|(not[\s]*found)|(reason[\s]for[\s]deletion:[\s]expiration)/ig;
 	var badLink = false;
 	var parser = new htmlparser.Parser({
 		ontext : function( text ) {

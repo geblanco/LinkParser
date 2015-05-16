@@ -12,17 +12,16 @@ var manageMidWare = function( err, results ) {
 
 		var _ = utils.downloader(results);
 		var endValidator = utils.endValidator;
-		async.waterfall(
-			[
-				_.download, 
-				endValidator
-			], function ( err, ret ) {
-				if ( err ) {
-					console.log(cli.red('post link problem: ', err));
-				} else {
-					console.log('Link parsed: ' + results + '\nStatus: ');
-					console.log(ret ? cli.red('Bad') : cli.green('Cool'));
+		async.waterfall([_.download, endValidator], function ( err, ret ) {
+
+			if ( err ) {
+				console.log(cli.red('post link problem: ', err));
+			} else {
+				if ( !ret ) {
+					//************OUTPUT POINT****************
+					console.log('Cool link: ' + results);
 				}
+			}
 		});
 	}
 };
