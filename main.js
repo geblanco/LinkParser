@@ -62,5 +62,9 @@ var baseUrl = process.argv[2],
 	lang 	= process.argv[3] || 'English',
 	_ 		= utils.downloader(baseUrl);
 
+if (lang == 'esp' || lang == 'sp' || lang == 's') {
+	lang = 'Español';
+};
+
 console.log( 'Catched: ' + baseUrl );
 async.waterfall([_.download, provider.parseEpisodeTable], midStage);
