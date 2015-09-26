@@ -3,9 +3,11 @@
   "version": "1.0.0",
   "description": "",
   "dependencies": {
-  	"request" : "2.55.0",
-  	"htmlparser2": "3.8.2",
-	"soupselect": "0.2.0",
-	"async": "0.0.9"
+      "request" : "2.55.0",
+      "htmlparser2": "3.8.2",
+      "jquery"  : "*",
+      "soupselect": "0.2.0",
+      "async": "*",
+      "cli-color": "*"
   }
 }

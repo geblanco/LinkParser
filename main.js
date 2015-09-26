@@ -3,7 +3,8 @@ var utils		  = require( __dirname + '/downloader/utils.js'),
 	async		  = require( 'async' ),
 	URL 	      = require( 'url' ),
 	htmlparser 	  = require( 'htmlparser2' ),
-	cli     	  = require('cli-color');
+	cli     	  = require('cli-color'),
+	debug		  = false;
 
 var manageMidWare = function( err, results ) {
 	if ( err ) {
@@ -11,15 +12,14 @@ var manageMidWare = function( err, results ) {
 	} else {
 
 		var _ = utils.downloader(results);
-		var endValidator = utils.endValidator;
-		async.waterfall([_.download, endValidator], function ( err, ret ) {
+		async.waterfall([_.download, utils.endValidator], function ( err, ret ) {
 
 			if ( err ) {
 				console.log(cli.red('post link problem: ', err));
 			} else {
 				if ( !ret ) {
 					//************OUTPUT POINT****************
-					console.log('Cool link: ' + results);
+					console.log( debug ? ('Cool link: ' + results) : ( results ) );
 				}
 			}
 		});
@@ -27,24 +27,36 @@ var manageMidWare = function( err, results ) {
 };
 
 var midQueue = async.queue( function( task, callback ) {
-
 	var _ = utils.downloader( URL.resolve(baseUrl, task.src) );
-	var midWare = utils.filterMidWare( task );
-	//download().prepareMidWare().download().parseEnd()
-	async.waterfall([ _.download, provider.prepareMidWare, midWare.filter ], manageMidWare);
+	async.waterfall([ _.download, function( html, callback ) {
+		provider.prepareMidWare( task.server, html, callback );
+	}], manageMidWare);
 	
 	//If we don't call this function we just process $concurrent links
 	callback();
 
-}, 40);
+}, 400);
 
 var midStage = function ( err, results ) {
 	if ( err ) {
-		console.log(cli.red('Main url parse error\n', error));
+		console.log(cli.red('Main url parse error\n', err));
 	} else {
 		//Table with links
 		//Filter by lang moment inside
-		provider.prepareEpisodes( results, midQueue, function( err ) {}, lang);
+		provider.prepareEpisodes( results, midQueue, function( err, episodes ) {
+			async.each( 
+				episodes,
+				function( episode, callback ) {
+					var _ = utils.downloader( URL.resolve(baseUrl, episode.src) );
+					async.waterfall([ _.download, function( html, callback ) {
+						provider.prepareMidWare( episode.server, html, callback );
+					}], function( err, results ) {
+						manageMidWare( err, results );
+						callback( null );
+					});
+				}, function() {}
+			);
+		}, lang);
 	}
 };
 
@@ -68,3 +80,12 @@ if (lang == 'esp' || lang == 'sp' || lang == 's') {
 
 console.log( 'Catched: ' + baseUrl );
 async.waterfall([_.download, provider.parseEpisodeTable], midStage);
+
+
+
+
+
+
+
+
+

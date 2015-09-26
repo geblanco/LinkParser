@@ -1,6 +1,7 @@
 var request  = require('request'),
 	cli		 = require('cli-color'),
-	htmlparser 	  = require( 'htmlparser2' );
+	htmlparser 	  = require( 'htmlparser2' ),
+	jsdom 	 = require("jsdom");
 
 module.exports.downloader = function( url ) {
 
@@ -13,31 +14,23 @@ module.exports.downloader = function( url ) {
 				return callback( 'Must provide both url and filename' );
 			}
 			request( url, function( error, response, body ) {
-				if ( !error && response.statusCode === 200 ) {
-					callback( null, body);
-				} else {
+				if ( error ) {
 					console.log(cli.yellow('Broken link, url:' + url + '\n'), cli.red(error));
-					callback( null, '' );
+					callback( error );
+				} else if ( response.statusCode === 200 ) {
+					jsdom.env({
+					  	html: body,
+					  	scripts: ["http://code.jquery.com/jquery.js"],
+					  	done: function(err, window) {
+					  		if ( err ) {
+					  			return callback( err );
+					  		}
+					  		callback(null, window);
+					  	}
+					});
+
 				}
 			});
-
-		}
-	}
-};
-
-module.exports.filterMidWare = function( item ){ 
-
-	this.item = item;
-
-	return {
-		filter: function( input, callback ) {
-			var i = 0;
-			for ( ; i < input.length && ( input[i].attribs.href.indexOf(item.server) === -1 ); i++);
-			if ( i === input.length ) {
-				callback('MidWare link not found');
-			} else {
-				callback( null, input[i].attribs.href );
-			}
 		}
 	}
 };
