@@ -1,6 +1,8 @@
-var request  = require('request'),
-	cli		 = require('cli-color'),
-	htmlparser 	  = require( 'htmlparser2' );
+var request  	= require('request');
+var cli		 	= require('cli-color');
+var htmlparser 	= require( 'htmlparser2' );
+var agent 		= 'Mozilla/5.0 (X11; Linux x86_64; rv:44.0) Gecko/20100101 Firefox/44.0';
+var reqOpts 	= { headers: { 'User-Agent': agent } };
 
 module.exports.downloader = function( url ) {
 
@@ -8,11 +10,11 @@ module.exports.downloader = function( url ) {
 	
 	return {
 		download : function( callback ) {
-		
+			//console.log('downloading', url);
 			if ( !url ) {
 				return callback( 'Must provide both url and filename' );
 			}
-			request( url, function( error, response, body ) {
+			request( url, reqOpts, function( error, response, body ) {
 				if ( !error && response.statusCode === 200 ) {
 					callback( null, body);
 				} else {

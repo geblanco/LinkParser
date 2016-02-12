@@ -1,7 +1,8 @@
 var htmlparser = require('htmlparser2');
 var select     = require('soupselect').select;
 var TABLE_TYPE = {'LINKS': 0, 'EPISODES': 1};
-
+var LANGS 	   = require('../langs.json');
+var	noop 	   = function(){};
 
 //Private helper functions
 var _urlParser = function( src ) {
@@ -13,7 +14,7 @@ var _urlParser = function( src ) {
 		var i = 0;
 		for (; i < src.children.length && src.children[ i ].name != 'a'; i++);
 		
-		if ( i === src.length ) {
+		if ( i === src.children.length ) {
 			return null;
 		} else {
 			return src.children[ i ].attribs.href;
@@ -22,50 +23,67 @@ var _urlParser = function( src ) {
 
 };
 
+var _extractServerFromLink = function( link ){
+	// http://www.google.com/s2/favicons?domain=megalinks.io
+	var aux = link.split('/');
+	var ret = null;
+	if( aux.length ){
+		aux = aux[ aux.length -1 ];
+		aux = aux.split('=');
+		if( aux.length ){
+			ret = aux[ aux.length -1 ];
+		}
+	}
+	return ret;
+};
+
 var _serverParser = function( server ) {
 
 	if ( !server ) {
 		return null;
 	} else {
-
+		//console.log('server parser', server);
 		var i = 0;
-		for (; i < server.children.length && server.children[ i ].name != 'a'; i++);
+		for (; i < server.children.length && server.children[ i ].name != 'img'; i++);
 		
-		if ( i === server.length ) {
+		if ( i === server.children.length ) {
 			return null;
 		} else {
-			if ( server.children[ i ].children.length > 0 ) {
-				var j = 0;
-				for (; j < server.children[ i ].children.length && 
-						   server.children[ i ].children[ j ].name != 'img'; 
-						j++
-					);
-				if (j === server.children[ i ].children.length) {
-					return null;
-				} else {
-					return server.children[ i ].children[ j ].attribs.alt || server.children[ i ].children[ j ].attribs.src || null;
-				}
-			}
-			return null;
+			return _extractServerFromLink( server.children[ i ].attribs.src );
 		}
 	}
 
 };
 
+var _extractLangFromLink = function( link ){
+
+	// http://www.seriesflv.net/images/lang/es.png
+	var aux = link.split('/');
+	var ret = null;
+	if( aux.length ){
+		aux = aux[aux.length-1];
+		aux = aux.split('.');
+		if( aux.length ){
+			ret = LANGS.hasOwnProperty( aux[ 0 ] ) ? LANGS[ aux[ 0 ] ] : null;
+		}
+	}
+	return ret;
+};
+
 var _langParser = function( lang ) {
-	
+	//console.log('lang parser', lang);
 	if ( !lang ) {
 		return null;
 	} else {
-
+		// Lang is given as an image
 		var i = 0;
-		for (; i < lang.children.length && lang.children[ i ].name != 'span'; i++);
+		for (; i < lang.children.length && lang.children[ i ].name != 'img'; i++);
 		
-		if ( i === lang.length ) {
+		if ( i === lang.children.length ) {
 			return null;
 		} 
 		else {
-			return lang.children[ i ].attribs.title || null;
+			return _extractLangFromLink( lang.children[ i ].attribs.src );
 		}
 	}
 	
@@ -82,6 +100,7 @@ var _episode = function( item ) {
 
 //Public functions
 module.exports = {
+
 	TABLE_TYPE: TABLE_TYPE,
 	//============Web dependant============
 	parseTable : function( htmll, callback ) {
@@ -105,35 +124,47 @@ module.exports = {
 			callback( 'Empty html' );
 		}
 	},
-	prepareTable : function( table, queue, language, type ) {
+	prepareTable : function( table, queue, language, type, linkNo ) {
 
 		var handler = new htmlparser.DefaultHandler(function( err, dom ) {
 			if ( err ) {
 				return err;
 			} else {
+
 				var rows = select( dom, 'tr' );
-				
 				rows.forEach(function( item, idx, arr ) {
 					
 					var col = select( item.children, 'td' );
 					if ( (col instanceof Array) && col.length > 2 ) {
-
 						// We extract the links for current episode, one step to middleWare
 						if( type === TABLE_TYPE.LINKS ){
 							//Filter by lang moment
+							// Order : Lang | Rubbish | Server | Link
 							if ( language ) {
 								var l = _langParser(col[2]);
 								if ( l === language ) {
-									queue.push( new _episode({ src: col[0], server: col[1], lang: col[2] }), function(err){} );
+									var ep = new _episode({ src: col[3], server: col[2], lang: col[0] });
+									if( ep.valid ){
+										ep.epNo = linkNo || null;
+										queue.push( ep, noop );
+									/*}else{
+										console.log('Unable to parse episode');*/
+									}
 								}
 							} else {
-								queue.push( new _episode({ src: col[0], server: col[1], lang: col[2] }), function(err){} );
+								var ep = new _episode({ src: col[3], server: col[2], lang: col[0] });
+								if( ep.valid ){
+									ep.epNo = linkNo || null;
+									queue.push( ep, noop );
+								/*}else{
+									console.log('Unable to parse episode');*/
+								}
 							}
 						}else{
 							// We extract a link for each espisode on this season
 							// col[ 0 ] is the first column on the row, which usually holds the link
 							//console.log('got a col', _urlParser( col[0] ));
-							queue.push( _urlParser( col[0] ), function(){} );
+							queue.push({ src: _urlParser( col[0] ), epNo: idx }, noop );
 						}
 					} 
 
