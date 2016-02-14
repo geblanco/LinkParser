@@ -5,6 +5,7 @@ var LANGS 	   = require('../langs.json');
 var	noop 	   = function(){};
 
 //Private helper functions
+// Get episode visualization link
 var _urlParser = function( src ) {
 
 	if ( !src ) {
@@ -25,6 +26,7 @@ var _urlParser = function( src ) {
 
 var _extractServerFromLink = function( link ){
 	// http://www.google.com/s2/favicons?domain=megalinks.io
+	// Want to get "megalink"
 	var aux = link.split('/');
 	var ret = null;
 	if( aux.length ){
@@ -35,8 +37,10 @@ var _extractServerFromLink = function( link ){
 		}
 	}
 	return ret;
+
 };
 
+// Get server name
 var _serverParser = function( server ) {
 
 	if ( !server ) {
@@ -58,6 +62,7 @@ var _serverParser = function( server ) {
 var _extractLangFromLink = function( link ){
 
 	// http://www.seriesflv.net/images/lang/es.png
+	// Want to get "es"
 	var aux = link.split('/');
 	var ret = null;
 	if( aux.length ){
@@ -68,8 +73,10 @@ var _extractLangFromLink = function( link ){
 		}
 	}
 	return ret;
+
 };
 
+// Get episode lang
 var _langParser = function( lang ) {
 	//console.log('lang parser', lang);
 	if ( !lang ) {
@@ -86,9 +93,10 @@ var _langParser = function( lang ) {
 			return _extractLangFromLink( lang.children[ i ].attribs.src );
 		}
 	}
-	
+
 };
 
+// Object constructor for an episode
 var _episode = function( item ) {
 	
 	this.src	= _urlParser( item.src );
@@ -103,12 +111,13 @@ module.exports = {
 
 	TABLE_TYPE: TABLE_TYPE,
 	//============Web dependant============
+	// Extract table from the hole html
 	parseTable : function( htmll, callback ) {
 			
 		var html = htmll + '';
 
 		if ( html.length > 0 ) {
-			var tableStart = html.indexOf( '<tbody>' );/*'<table class="episodes series">' ),*/
+			var tableStart = html.indexOf( '<tbody>' );
 				tableEnd   = html.indexOf( '</tbody>' );
 
 			//Try reading from middle file
@@ -124,6 +133,8 @@ module.exports = {
 			callback( 'Empty html' );
 		}
 	},
+	// Given a table, try parsing server | lang | link for each of its rows,
+	// This is were the magic happens, is one the critical parts of the provider
 	prepareTable : function( table, queue, language, type, linkNo ) {
 
 		var handler = new htmlparser.DefaultHandler(function( err, dom ) {
@@ -176,6 +187,7 @@ module.exports = {
 		var parser = new htmlparser.Parser( handler );
 		parser.parseComplete(table);
 	},
+	// Given the midware html, extract all hrefs (links) for filtering later on the filter
 	prepareMidWare : function( item, callback ) {
 		var handler = new htmlparser.DefaultHandler(function( err, item ) {
 			if ( err ) {

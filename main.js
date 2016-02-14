@@ -18,6 +18,9 @@ var manageMidWare = function( err, results, callback ) {
 	}
 };
 
+// Each task has a visualization server link
+// Download it, extract the real server link 
+// (go through the midWare) and validate it (utils filter)
 var midQueue = async.queue( function( task, callback ) {
 
 	var _ = utils.downloader( URL.resolve(baseUrl, task.src) );
@@ -44,6 +47,8 @@ var midQueue = async.queue( function( task, callback ) {
 
 }, 40);
 
+// Receives a raw table full of visualization links
+// Parse it and enqueue each link
 var midStage = function ( err, results, number ) {
 
 	if ( err ) {
@@ -55,10 +60,13 @@ var midStage = function ( err, results, number ) {
 	}
 };
 
+// Queue for processing each episode.
+// Each task has a link to a the episode visualization links table  
+// (the provider middle ware, actually, which in turn gets you to the server)
 var episodeQueue = async.queue( function( task, callback ) {
 
 	var _ = utils.downloader( URL.resolve(baseUrl, task.src) );
-	async.waterfall([_.download, provider.parseTable], function( err, results ){
+	async.waterfall([ _.download, provider.parseTable ], function( err, results ){
 
 		midStage( err, results, task.epNo )
 
@@ -69,16 +77,18 @@ var episodeQueue = async.queue( function( task, callback ) {
 
 }, 40);
 
+// Receives a table full of links of all the episodes in a season 
 var firstStage = function ( err, results ) {
 	//console.log('firstStage', results);
 	if ( err ) {
 		console.log(cli.red('Main url parse error\n', error));
 	} else {
 		//Table with episode links 
-		provider.prepareTable( results, episodeQueue, lang, provider.TABLE_TYPE.EPISODES);
+		provider.prepareTable( results, episodeQueue, lang, provider.TABLE_TYPE.EPISODES );
 	}
 };
 
+// Extract show name, stablishes the root folder
 var _parseShow = function( url ){
 	// Extract season by show
 	
@@ -89,6 +99,9 @@ var _parseShow = function( url ){
 	return r;
 }
 
+// Create a folder with the given name at the root of the project
+// Used to create downloads root and its subfolders
+// Each episode creates its own folder  
 var _makeFolder = function( src ){
 	console.log('_makeFolder', 'src', src, 'folder', __dirname + '/' + SHOW + ((src)?( '/' + src ):''));
 	if( FS ){
@@ -103,8 +116,10 @@ var _makeFolder = function( src ){
 
 }
 
+// Given a string (link) and a file, 
+// append the string at the end of the file
 var _appendLink = function( file, content ){
-	console.log('_appendLink', 'file', file, 'folder', __dirname + '/' + SHOW + '/' + file);
+
 	if( FS ){
 
 		var folder = __dirname + '/' + SHOW + '/' + file;
@@ -132,7 +147,7 @@ if ( process.argv.length < 3 ) {
 	process.exit( 1 );
 }
 
-// Parse link to get provider
+// Parse link to get provider, used for requiring the appropriate script
 var tmp = URL.parse( process.argv[2] );
 tmp = tmp.hostname.split('.');
 
